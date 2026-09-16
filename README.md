@@ -16,8 +16,8 @@ Both surfaces share the settings. By default every instance (all monitors,
 bar and desktop) shows the same kana; turn off *Same kana everywhere* for
 independent rotations.
 
-Sibling plugins: [JLPT Kanji](https://nemiru.tail2e41a3.ts.net/lykos/dms-kanji-widget)
-and [JLPT vocab + Jlab listening](https://nemiru.tail2e41a3.ts.net/lykos/jlpt-kanji-widget)
+Sibling plugins: [Hiragana](https://nemiru.tail2e41a3.ts.net/lykos/dms-hiragana-widget),
+[JLPT Kanji](https://nemiru.tail2e41a3.ts.net/lykos/dms-kanji-widget) and [JLPT vocab + Jlab listening](https://nemiru.tail2e41a3.ts.net/lykos/jlpt-kanji-widget)
 (the `dms-plugin` branch).
 
 ## Install

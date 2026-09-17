@@ -84,12 +84,16 @@ playback; `PIPER_SPEAKER`, `PIPER_LENGTH_SCALE`, `PIPER_VOICE` knobs; errors in
 `~/.cache/say-ja.log`). Expect the single-kana problems described above.
 
 No sound from the widget? (1) `pw-play ~/dms-katakana-widget/KatakanaWidget/data/audio/ka.wav`
-in a terminal must work; (2) click *Play* in the popout (or middle-click the
-desktop widget), *Speak automatically* is off by default; (3) DMS is started by
-the compositor, so a player that only lives in `~/.local/bin` is not on its
-PATH: set *Audio player command* to the full path. Commands are split on
-whitespace and run without a shell, so `{file}` / `{text}` must be a whole
-argument.
+in a terminal must work; (2) *Text-to-speech command* must be empty, anything
+in it replaces the clips; (3) click *Play* in the popout (or middle-click the
+desktop widget) and read `~/.cache/katakana-widget.log`: every play attempt
+logs the clip path, the player it picked and any error. If the log stays
+empty DMS is still running an old copy of the plugin: check that
+`~/.config/DankMaterialShell/plugins/KatakanaWidget` points at (or is a fresh
+copy of) the clone and restart DMS, the settings panel is cached until then.
+(4) A player that only lives in `~/.local/bin` is not on DMS's PATH: set
+*Audio player command* to its full path. Commands are split on whitespace and
+run without a shell, so `{file}` / `{text}` must be a whole argument.
 
 *Speak automatically* says every new kana as it appears. Only the instance
 that picked the kana speaks, so with *Same kana everywhere* on you hear it

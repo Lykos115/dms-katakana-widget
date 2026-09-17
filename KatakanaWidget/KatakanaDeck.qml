@@ -166,14 +166,17 @@ Item {
     readonly property string clipFile: dataDir + "/audio/" + reading + ".wav"
 
     // first player found on PATH; each one drains the buffer before exiting,
-    // so a 0.4 s clip is not cut short
+    // so a 0.4 s clip is not cut short. Every call is logged to
+    // ~/.cache/katakana-widget.log because stderr goes nowhere under DMS.
     readonly property string autoPlayer:
-        'f="$1"; ' +
-        'command -v pw-play >/dev/null && exec pw-play "$f"; ' +
-        'command -v paplay  >/dev/null && exec paplay "$f"; ' +
-        'command -v mpv     >/dev/null && exec mpv --no-video --really-quiet "$f"; ' +
-        'command -v ffplay  >/dev/null && exec ffplay -nodisp -autoexit -loglevel quiet -af apad=pad_dur=0.3 "$f"; ' +
-        'echo "katakanaWidget: no audio player (pw-play, paplay, mpv, ffplay)" >&2; exit 1'
+        'f="$1"; log="${XDG_CACHE_HOME:-$HOME/.cache}/katakana-widget.log"; ' +
+        'mkdir -p "$(dirname "$log")"; exec 2>>"$log"; ' +
+        'echo "$(date "+%F %T") play $f (PATH=$PATH)" >&2; ' +
+        '[ -f "$f" ] || { echo "  clip not found" >&2; exit 1; }; ' +
+        'for p in pw-play paplay; do command -v "$p" >/dev/null && { echo "  using $p" >&2; exec "$p" "$f"; }; done; ' +
+        'command -v mpv    >/dev/null && { echo "  using mpv" >&2; exec mpv --no-video --really-quiet "$f"; }; ' +
+        'command -v ffplay >/dev/null && { echo "  using ffplay" >&2; exec ffplay -nodisp -autoexit -loglevel quiet -af apad=pad_dur=0.3 "$f"; }; ' +
+        'echo "  no audio player found (pw-play, paplay, mpv, ffplay)" >&2; exit 1'
 
     function play() {
         if (!hasAudio) return;

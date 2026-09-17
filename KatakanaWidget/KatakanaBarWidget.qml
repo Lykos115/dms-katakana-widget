@@ -16,6 +16,8 @@ PluginComponent {
     readonly property bool barRomaji: pluginData.barRomaji ?? true
     readonly property string fontFamily: (pluginData.fontFamily ?? "") !== "" ? pluginData.fontFamily : Theme.fontFamily
     readonly property real popoutMainSize: pluginData.popoutMainSize ?? 96
+    readonly property bool openOnChart: pluginData.openOnChart ?? false
+    readonly property real chartMaxHeight: pluginData.chartMaxHeight ?? 480
 
     KatakanaDeck {
         id: deck
@@ -69,7 +71,66 @@ PluginComponent {
             headerText: deck.tag !== "" ? deck.tag.toUpperCase() : "KANA"
             showCloseButton: true
 
+            // "card" = the current kana with Play / Next, "chart" = the whole table
+            property string tab: root.openOnChart ? "chart" : "card"
+            property string chartSet: "katakana"
+
+            // tab strip
+            Row {
+                leftPadding: Theme.spacingS
+                spacing: Theme.spacingXS
+                bottomPadding: Theme.spacingS
+
+                Repeater {
+                    model: [
+                        { key: "card",  label: "Card",  icon: "style" },
+                        { key: "chart", label: "Chart", icon: "grid_view" }
+                    ]
+
+                    Rectangle {
+                        required property var modelData
+                        readonly property bool active: card.tab === modelData.key
+                        width: tabRow.implicitWidth + Theme.spacingM * 2
+                        height: 30
+                        radius: 15
+                        color: active ? Theme.primary
+                             : tabArea.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+
+                        Row {
+                            id: tabRow
+                            anchors.centerIn: parent
+                            spacing: Theme.spacingXS
+
+                            DankIcon {
+                                name: modelData.icon
+                                size: Theme.iconSize - 4
+                                color: active ? Theme.primaryText : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            StyledText {
+                                text: modelData.label
+                                color: active ? Theme.primaryText : Theme.surfaceText
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.weight: Font.Medium
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        MouseArea {
+                            id: tabArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: card.tab = modelData.key
+                        }
+                    }
+                }
+            }
+
+            // --- Card tab -------------------------------------------------
             Column {
+                visible: card.tab === "card"
                 width: parent.width
                 spacing: Theme.spacingS
                 leftPadding: Theme.spacingS
@@ -158,6 +219,125 @@ PluginComponent {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: deck.next(true)
+                        }
+                    }
+                }
+            }
+
+            // --- Chart tab ------------------------------------------------
+            // The full gojūon table. Tap a kana to make it the current one
+            // (everywhere, if "same kana everywhere" is on) and hear it.
+            Column {
+                id: chart
+                visible: card.tab === "chart"
+                width: parent.width
+                spacing: Theme.spacingXS
+                leftPadding: Theme.spacingS
+                rightPadding: Theme.spacingS
+                bottomPadding: Theme.spacingS
+
+                readonly property real cellGap: 3
+                readonly property real innerW: width - leftPadding - rightPadding
+                readonly property real cellSize: Math.floor((innerW - cellGap * (deck.chartColumns - 1)) / deck.chartColumns)
+
+                // katakana / hiragana switch, only when hiragana is enabled in the settings
+                Row {
+                    visible: deck.showHiragana
+                    spacing: Theme.spacingXS
+                    bottomPadding: Theme.spacingXS
+
+                    Repeater {
+                        model: [ { key: "katakana", label: "カタカナ" }, { key: "hiragana", label: "ひらがな" } ]
+
+                        Rectangle {
+                            required property var modelData
+                            readonly property bool active: card.chartSet === modelData.key
+                            width: setLabel.implicitWidth + Theme.spacingM * 2
+                            height: 26
+                            radius: 13
+                            color: active ? Theme.surfaceContainerHighest : "transparent"
+                            border.width: 1
+                            border.color: active ? Theme.primary : Theme.outline
+
+                            StyledText {
+                                id: setLabel
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                font.family: root.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: active ? Theme.primary : Theme.surfaceVariantText
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: card.chartSet = modelData.key
+                            }
+                        }
+                    }
+                }
+
+                // the table is ~27 rows, taller than most screens: scroll it
+                DankFlickable {
+                    width: chart.innerW
+                    height: Math.min(chartGrid.implicitHeight, root.chartMaxHeight)
+                    contentWidth: width
+                    contentHeight: chartGrid.implicitHeight
+                    clip: true
+
+                    Grid {
+                        id: chartGrid
+                        width: parent.width
+                        columns: deck.chartColumns
+                        columnSpacing: chart.cellGap
+                        rowSpacing: chart.cellGap
+
+                        Repeater {
+                            model: deck.kana.length > 0 ? deck.chartCells(card.chartSet) : []
+
+                            Rectangle {
+                                id: cell
+                                required property var modelData
+                                readonly property bool present: modelData.main !== ""
+                                readonly property bool current: present && modelData.main === deck.main && modelData.tag === deck.tag
+                                width: chart.cellSize
+                                height: chart.cellSize
+                                radius: Theme.cornerRadius / 2
+                                color: !present ? "transparent"
+                                     : current ? Theme.primary
+                                     : cellArea.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: 0
+                                    visible: cell.present
+
+                                    StyledText {
+                                        text: cell.modelData.main
+                                        font.family: root.fontFamily
+                                        font.pixelSize: chart.cellSize * (cell.modelData.main.length > 1 ? 0.36 : 0.5)
+                                        font.weight: Font.Bold
+                                        color: cell.current ? Theme.primaryText : Theme.surfaceText
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+
+                                    StyledText {
+                                        text: cell.modelData.reading
+                                        font.pixelSize: Math.max(8, chart.cellSize * 0.22)
+                                        color: cell.current ? Theme.primaryText : Theme.surfaceVariantText
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: cellArea
+                                    anchors.fill: parent
+                                    enabled: cell.present
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: deck.show(cell.modelData)
+                                }
+                            }
                         }
                     }
                 }

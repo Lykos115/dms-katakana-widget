@@ -154,6 +154,47 @@ Item {
         if (autoPlay) play();
     }
 
+    // jump straight to a kana (chart tap): publish it like next(true) and play it
+    function show(it) {
+        setCurrent(it);
+        ready = true;
+        ticker.restart();
+        if (syncInstances) {
+            lastStamp = Date.now();
+            PluginService.setGlobalVar(pluginId, "current", {
+                main: it.main, reading: it.reading, tag: it.tag, stamp: lastStamp
+            });
+        }
+        play();
+    }
+
+    // --- chart -------------------------------------------------------------
+    // The whole set as the gojūon table, flattened for a 5-column Grid: rows
+    // of a i u e o, the ya row in columns a/u/o, the wa row in a/o, ん alone,
+    // then the voiced rows and the ャュョ combinations (3 per row). Empty
+    // cells have main "". kana.json lists each set in exactly this order.
+    readonly property int chartColumns: 5
+
+    function chartCells(set) {
+        const list = kana.filter(k => k.set === set)
+                         .map(k => ({ main: k.kana, reading: k.romaji, tag: k.set }));
+        const gap = { main: "", reading: "", tag: "" };
+        const cells = [];
+        let i = 0;
+        const row = pattern => {                     // pattern: 1 = next kana, 0 = empty cell
+            if (i >= list.length) return;
+            for (const p of pattern) cells.push(p && i < list.length ? list[i++] : gap);
+        };
+        for (let r = 0; r < 7; r++) row([1, 1, 1, 1, 1]);   // あ か さ た な は ま
+        row([1, 0, 1, 0, 1]);                                // や
+        row([1, 1, 1, 1, 1]);                                // ら
+        row([1, 0, 0, 0, 1]);                                // わ
+        row([1, 0, 0, 0, 0]);                                // ん
+        for (let r = 0; r < 5; r++) row([1, 1, 1, 1, 1]);   // が ざ だ ば ぱ
+        while (i < list.length) row([1, 1, 1, 0, 0]);       // きゃ …
+        return cells;
+    }
+
     // --- audio -------------------------------------------------------------
     // The command is split on whitespace, no shell involved; "{file}" must be
     // a whole argument and is replaced with the clip path.

@@ -6,15 +6,13 @@ Open JTalk) falls apart on a single mora. Piper's sentence-trained voice gives a
 different length every call, chops the vowel, and renders ン as a click; a
 recogniser identified 5 of 104 kana.
 
-Default source is the native-speaker recordings from Learn Japanese Adventure
+The clips are the native-speaker recordings from Learn Japanese Adventure
 (https://www.learn-japanese-adventure.com/learn-how-to-speak-japanese.html,
-media-files/kanasound-<romaji>.mp3). `--source edge` synthesises with
-Microsoft's neural voice via edge-tts instead.
+media-files/kanasound-<romaji>.mp3), credited in the README.
 
-    python3 -m venv .venv && .venv/bin/pip install numpy          # + edge-tts for --source edge
+    python3 -m venv .venv && .venv/bin/pip install numpy
     .venv/bin/python gen-audio                       # all readings (network needed)
     .venv/bin/python gen-audio ka shi n              # just these
-    .venv/bin/python gen-audio --source edge --voice ja-JP-KeitaNeural
 
 Needs ffmpeg and curl on PATH. One file per romaji reading, so hiragana and
 katakana share clips and ジ/ヂ, ズ/ヅ (same sound) share too. The raw
@@ -24,7 +22,6 @@ short lead-in, no clipped vowel.
 """
 
 import argparse
-import asyncio
 import json
 import subprocess
 import sys
@@ -60,13 +57,6 @@ def fetch_site(reading: str) -> np.ndarray:
     return decode(mp3)
 
 
-def render_edge(text: str, voice: str) -> np.ndarray:
-    import edge_tts
-
-    mp3 = OUT / ".tmp.mp3"
-    asyncio.run(edge_tts.Communicate(text, voice).save(str(mp3)))
-    return decode(mp3)
-
 
 def tidy(a: np.ndarray) -> np.ndarray:
     loud = np.where(np.abs(a) > THRESHOLD)[0]
@@ -94,12 +84,10 @@ def write(path: Path, a: np.ndarray) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("readings", nargs="*", help="romaji readings to (re)render; default: all")
-    ap.add_argument("--source", choices=["site", "edge"], default="site", help="site = Learn Japanese Adventure recordings (default), edge = edge-tts synthesis")
-    ap.add_argument("--voice", default="ja-JP-NanamiNeural", help="edge-tts voice for --source edge (edge-tts --list-voices | grep ja-JP)")
     args = ap.parse_args()
 
     kana = json.loads((DATA / "kana.json").read_text())
-    # katakana spelling as the source text; the reading is the file name
+    # katakana spelling for the log line; the reading is the file name
     by_reading = {}
     for k in sorted(kana, key=lambda k: k["set"] != "katakana"):   # katakana first
         by_reading.setdefault(k["romaji"], k["kana"])
@@ -111,8 +99,7 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     for reading in wanted:
         text = by_reading[reading]
-        raw = fetch_site(reading) if args.source == "site" else render_edge(text, args.voice)
-        a = tidy(raw)
+        a = tidy(fetch_site(reading))
         write(OUT / f"{reading}.wav", a)
         print(f"{text}\t{reading}.wav\t{len(a) / RATE:.2f}s")
     return 0

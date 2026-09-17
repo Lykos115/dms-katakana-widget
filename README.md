@@ -10,7 +10,7 @@ Shell itself. One plugin, two surfaces (DMS ≥ 1.5.0 composite plugin):
   in the bar settings the card opens on hover.
 * **Desktop widget** — text on the wallpaper layer, fixed where you put it.
   Right-click drag moves it, the corner handle resizes it, left click skips
-  to the next kana, middle click speaks it.
+  to the next kana, middle click plays it.
 
 Both surfaces share the settings. By default every instance (all monitors,
 bar and desktop) shows the same kana; turn off *Same kana everywhere* for
@@ -42,71 +42,58 @@ Reload after editing the QML: `dms ipc call plugins reload katakanaWidget`.
 | section | keys |
 |---|---|
 | Content | katakana, hiragana too, voiced kana, combination kana, **seconds per kana** (3–600), random / gojūon order, same kana everywhere, Japanese font |
-| Audio | speak automatically, audio player command, text-to-speech command (optional, replaces the clips) |
+| Audio | play automatically, audio player command |
 | Bar pill & popout | romaji in the pill, popout width, popout kana size |
 | Desktop widget | kana size, show romaji, show set tag, text outline, background opacity |
 
 ## Audio
 
-*Play* in the popout (or middle click on the desktop widget) plays a bundled
-clip of the kana from `KatakanaWidget/data/audio/<romaji>.wav`. Every clip is
-trimmed and levelled to the same loudness, so all 104 kana sound alike in
-length and volume. The player is picked at run time: the first of `pw-play`,
-`paplay`, `mpv`, `ffplay` on PATH (all of them drain the buffer before exiting,
-so short clips are not cut). *Audio player command* overrides that, e.g.
-`pw-play {file}`.
-
-The clips are native-speaker recordings from
+*Play* in the popout (or middle click on the desktop widget) plays a recording
+of the kana from `KatakanaWidget/data/audio/<romaji>.wav`. The recordings are
+by a native speaker, from
 [Learn Japanese Adventure](https://www.learn-japanese-adventure.com/learn-how-to-speak-japanese.html)
-(the kana sound files on that page). The recordings remain that site's
-property and are bundled here with credit only. `gen-audio` downloads them, trims
-the silence, levels them and writes the WAVs. To re-fetch, or to synthesise
-with Microsoft's neural voice instead:
+(the kana sound files on that page). They remain that site's property and are
+bundled here with credit only. `gen-audio` downloads them, trims the silence,
+levels them all to the same loudness and writes the WAVs; one clip per romaji
+reading, shared by hiragana and katakana. To re-fetch:
 
 ```sh
-python3 -m venv .venv && .venv/bin/pip install numpy       # plus ffmpeg and curl on PATH
-.venv/bin/python gen-audio                                  # recordings from the site
-.venv/bin/pip install edge-tts && .venv/bin/python gen-audio --source edge   # synthesised
+python3 -m venv .venv && .venv/bin/pip install numpy    # plus ffmpeg and curl on PATH
+.venv/bin/python gen-audio
 ```
 
-Why clips and not live text-to-speech: no offline engine says a lone mora
-well. Piper's Japanese voice is trained on sentences; on a single kana it
-returns a different length every call, chops the vowel, renders ン as a click
-and peaks every clip at full scale, so kana sound inconsistent and often wrong
-(a speech recogniser identified 5 of 104). espeak-ng and Open JTalk are
-steadier but their consonants are weak (21 and 30 of 104).
+The player is picked at run time: the first of `pw-play`, `paplay`, `mpv`,
+`ffplay` on PATH (all of them drain the buffer before exiting, so short clips
+are not cut). *Audio player command* overrides that, e.g. `pw-play {file}`;
+it is split on whitespace and run without a shell, so `{file}` must be a
+whole argument.
 
-Live speech is still available: set *Text-to-speech command* and the clips
-are bypassed, `{text}` replaced by the kana. `espeak-ng -v ja -s 110 {text}`
-works out of the box; `say-ja {text}` uses Piper (`pipx install
-"piper-tts[http,ja]"`, then `say-ja setup`; `say-ja server` for instant
-playback; `PIPER_SPEAKER`, `PIPER_LENGTH_SCALE`, `PIPER_VOICE` knobs; errors in
-`~/.cache/say-ja.log`). Expect the single-kana problems described above.
-
-No sound from the widget? (1) `pw-play ~/dms-katakana-widget/KatakanaWidget/data/audio/ka.wav`
-in a terminal must work; (2) *Text-to-speech command* must be empty, anything
-in it replaces the clips; (3) click *Play* in the popout (or middle-click the
-desktop widget) and read `~/.cache/katakana-widget.log`: every play attempt
-logs the clip path, the player it picked and any error. If the log stays
-empty DMS is still running an old copy of the plugin: check that
-`~/.config/DankMaterialShell/plugins/KatakanaWidget` points at (or is a fresh
-copy of) the clone and restart DMS, the settings panel is cached until then.
-(4) A player that only lives in `~/.local/bin` is not on DMS's PATH: set
-*Audio player command* to its full path. Commands are split on whitespace and
-run without a shell, so `{file}` / `{text}` must be a whole argument.
-
-*Speak automatically* says every new kana as it appears. Only the instance
-that picked the kana speaks, so with *Same kana everywhere* on you hear it
+*Play automatically* plays every new kana as it appears. Only the instance
+that picked the kana plays it, so with *Same kana everywhere* on you hear it
 once even with several pills and widgets.
+
+No sound? (1) `pw-play ~/dms-katakana-widget/KatakanaWidget/data/audio/ka.wav`
+in a terminal must work. (2) Press *Play* and read `~/.cache/katakana-widget.log`:
+every attempt logs the clip path, the player it picked and any error. (3) If
+the log stays empty DMS is running an old copy of the plugin: `install.sh`
+symlinks the clone so pulls apply directly, and `dms kill; dms run -d`
+restarts the shell (`dms ipc call plugins reload katakanaWidget` keeps
+cached QML). (4) A player that only lives in `~/.local/bin` is not on DMS's
+PATH: set *Audio player command* to its full path.
+
+Why recordings and not text-to-speech: no offline engine says a lone mora
+well. Piper's Japanese voice is trained on sentences and on a single kana
+returns a different length every call, chops the vowel and renders ン as a
+click (a speech recogniser identified 5 of 104 kana); espeak-ng and Open
+JTalk are steadier but their consonants are weak (21 and 30 of 104).
 
 ## Files
 
 | file | role |
 |---|---|
-| `gen-audio` | builds `data/audio/*.wav` from the Learn Japanese Adventure recordings (or edge-tts), see Audio |
-| `say-ja` | optional Piper text-to-speech wrapper, see Audio |
+| `gen-audio` | builds `data/audio/*.wav` from the Learn Japanese Adventure recordings, see Audio |
 | `KatakanaWidget/plugin.json` | composite manifest, `widget` + `desktop` surfaces |
-| `KatakanaWidget/KatakanaDeck.qml` | loads `data/kana.json`, filters, rotates on a timer, speaks |
+| `KatakanaWidget/KatakanaDeck.qml` | loads `data/kana.json`, filters, rotates on a timer, plays the clip |
 | `KatakanaWidget/KatakanaBarWidget.qml` | `PluginComponent`: pill + popout |
 | `KatakanaWidget/KatakanaDesktopWidget.qml` | `DesktopPluginComponent` |
 | `KatakanaWidget/KatakanaSettings.qml` | settings UI (`PluginSettings`) |

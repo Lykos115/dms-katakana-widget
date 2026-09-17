@@ -1,7 +1,7 @@
 {
     "id": "katakanaWidget",
     "name": "Katakana",
-    "description": "Rotates through the katakana (and optionally hiragana) with romaji. Bar pill with a popout card, and a desktop widget. Speaks the kana aloud.",
+    "description": "Rotates through the katakana (and optionally hiragana) with romaji. Bar pill with a popout card, and a desktop widget. Plays each kana aloud (native-speaker recordings).",
     "version": "0.1.0",
     "author": "lykos",
     "type": "composite",

@@ -69,8 +69,8 @@ PluginSettings {
 
     ToggleSetting {
         settingKey: "autoPlay"
-        label: "Speak automatically"
-        description: "Say every new kana as it appears (only the instance that picked it speaks)"
+        label: "Play automatically"
+        description: "Play every new kana as it appears (only the instance that picked it plays)"
         defaultValue: false
     }
 
@@ -79,14 +79,6 @@ PluginSettings {
         label: "Audio player command"
         description: "Plays the bundled clip, {file} is replaced by its path. Empty: first of pw-play, paplay, mpv, ffplay found on PATH"
         placeholder: "pw-play {file}"
-        defaultValue: ""
-    }
-
-    StringSetting {
-        settingKey: "ttsCommand"
-        label: "Text-to-speech command (optional)"
-        description: "Leave empty to play the bundled clips. Set to use live speech instead, {text} is replaced by the kana, e.g. say-ja {text} (Piper) or espeak-ng -v ja {text}"
-        placeholder: "say-ja {text}"
         defaultValue: ""
     }
 

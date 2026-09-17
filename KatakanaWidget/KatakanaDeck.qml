@@ -5,7 +5,7 @@ import qs.Services
 
 // Non-visual helper shared by the bar widget and the desktop widget.
 // Loads data/kana.json, keeps the katakana (plus hiragana if enabled),
-// rotates on a timer and speaks the kana on request.
+// rotates on a timer and plays the kana's clip on request.
 Item {
     id: deck
     visible: false
@@ -25,11 +25,9 @@ Item {
     // keep every bar pill / desktop widget (all monitors) on the same kana
     readonly property bool syncInstances: settings.syncInstances ?? true
     readonly property bool autoPlay: settings.autoPlay ?? false
-    // Audio: pre-rendered clips in data/audio/<romaji>.wav (see gen-audio) played
+    // Audio: recorded clips in data/audio/<romaji>.wav (see gen-audio) played
     // with playerCommand; empty = pick pw-play / paplay / mpv / ffplay at run time.
-    // A non-empty ttsCommand replaces the clips with live text-to-speech.
     readonly property string playerCommand: String(settings.playerCommand ?? "").trim()
-    readonly property string ttsCommand: String(settings.ttsCommand ?? "").trim()
     readonly property string pluginId: "katakanaWidget"
     property double lastStamp: 0
 
@@ -157,8 +155,8 @@ Item {
     }
 
     // --- audio -------------------------------------------------------------
-    // Commands are split on whitespace, no shell involved; "{file}" / "{text}"
-    // must be a whole argument and is replaced with the clip path / the kana.
+    // The command is split on whitespace, no shell involved; "{file}" must be
+    // a whole argument and is replaced with the clip path.
     function argv(cmd, key, value) {
         return cmd.split(/\s+/).filter(t => t.length > 0).map(t => t === key ? value : t);
     }
@@ -180,12 +178,8 @@ Item {
 
     function play() {
         if (!hasAudio) return;
-        // a "{file}" command typed into the text-to-speech field is a player command
-        const player = playerCommand !== "" ? playerCommand : (ttsCommand.includes("{file}") ? ttsCommand : "");
-        if (player !== "")
-            Quickshell.execDetached(argv(player, "{file}", clipFile));
-        else if (ttsCommand !== "")
-            Quickshell.execDetached(argv(ttsCommand, "{text}", main));
+        if (playerCommand !== "")
+            Quickshell.execDetached(argv(playerCommand, "{file}", clipFile));
         else
             Quickshell.execDetached(["sh", "-c", autoPlayer, "sh", clipFile]);
     }

@@ -28,8 +28,8 @@ Item {
     // Audio: pre-rendered clips in data/audio/<romaji>.wav (see gen-audio) played
     // with playerCommand; empty = pick pw-play / paplay / mpv / ffplay at run time.
     // A non-empty ttsCommand replaces the clips with live text-to-speech.
-    readonly property string playerCommand: settings.playerCommand ?? ""
-    readonly property string ttsCommand: settings.ttsCommand ?? ""
+    readonly property string playerCommand: String(settings.playerCommand ?? "").trim()
+    readonly property string ttsCommand: String(settings.ttsCommand ?? "").trim()
     readonly property string pluginId: "katakanaWidget"
     property double lastStamp: 0
 
@@ -180,10 +180,12 @@ Item {
 
     function play() {
         if (!hasAudio) return;
-        if (ttsCommand !== "")
+        // a "{file}" command typed into the text-to-speech field is a player command
+        const player = playerCommand !== "" ? playerCommand : (ttsCommand.includes("{file}") ? ttsCommand : "");
+        if (player !== "")
+            Quickshell.execDetached(argv(player, "{file}", clipFile));
+        else if (ttsCommand !== "")
             Quickshell.execDetached(argv(ttsCommand, "{text}", main));
-        else if (playerCommand !== "")
-            Quickshell.execDetached(argv(playerCommand, "{file}", clipFile));
         else
             Quickshell.execDetached(["sh", "-c", autoPlayer, "sh", clipFile]);
     }

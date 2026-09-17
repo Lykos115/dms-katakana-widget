@@ -56,20 +56,25 @@ length and volume. The player is picked at run time: the first of `pw-play`,
 so short clips are not cut). *Audio player command* overrides that, e.g.
 `pw-play {file}`.
 
+The clips are native-speaker recordings from
+[Learn Japanese Adventure](https://www.learn-japanese-adventure.com/learn-how-to-speak-japanese.html)
+(the kana sound files on that page). The recordings remain that site's
+property and are bundled here with credit only. `gen-audio` downloads them, trims
+the silence, levels them and writes the WAVs. To re-fetch, or to synthesise
+with Microsoft's neural voice instead:
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install numpy       # plus ffmpeg and curl on PATH
+.venv/bin/python gen-audio                                  # recordings from the site
+.venv/bin/pip install edge-tts && .venv/bin/python gen-audio --source edge   # synthesised
+```
+
 Why clips and not live text-to-speech: no offline engine says a lone mora
 well. Piper's Japanese voice is trained on sentences; on a single kana it
 returns a different length every call, chops the vowel, renders ン as a click
 and peaks every clip at full scale, so kana sound inconsistent and often wrong
 (a speech recogniser identified 5 of 104). espeak-ng and Open JTalk are
-steadier but their consonants are weak (21 and 30 of 104). Microsoft's neural
-voice (via `edge-tts`) says isolated kana cleanly, so it was rendered once with
-`gen-audio` and the result is committed. To re-render (other voice, new kana):
-
-```sh
-python3 -m venv .venv && .venv/bin/pip install edge-tts numpy   # plus ffmpeg on PATH
-.venv/bin/python gen-audio                       # all readings
-.venv/bin/python gen-audio --voice ja-JP-KeitaNeural   # male voice
-```
+steadier but their consonants are weak (21 and 30 of 104).
 
 Live speech is still available: set *Text-to-speech command* and the clips
 are bypassed, `{text}` replaced by the kana. `espeak-ng -v ja -s 110 {text}`
@@ -94,7 +99,7 @@ once even with several pills and widgets.
 
 | file | role |
 |---|---|
-| `gen-audio` | renders `data/audio/*.wav` with edge-tts, see Audio |
+| `gen-audio` | builds `data/audio/*.wav` from the Learn Japanese Adventure recordings (or edge-tts), see Audio |
 | `say-ja` | optional Piper text-to-speech wrapper, see Audio |
 | `KatakanaWidget/plugin.json` | composite manifest, `widget` + `desktop` surfaces |
 | `KatakanaWidget/KatakanaDeck.qml` | loads `data/kana.json`, filters, rotates on a timer, speaks |
@@ -102,7 +107,7 @@ once even with several pills and widgets.
 | `KatakanaWidget/KatakanaDesktopWidget.qml` | `DesktopPluginComponent` |
 | `KatakanaWidget/KatakanaSettings.qml` | settings UI (`PluginSettings`) |
 | `KatakanaWidget/data/kana.json` | hiragana + katakana with romaji, in gojūon order |
-| `KatakanaWidget/data/audio/` | one clip per romaji reading (hiragana and katakana share them) |
+| `KatakanaWidget/data/audio/` | one clip per romaji reading (hiragana and katakana share them), recordings © Learn Japanese Adventure |
 
 Status: written against the DMS `master` plugin API and syntax-checked with
 `qmllint`, not yet run in a live DMS session. If DMS logs an error on load,

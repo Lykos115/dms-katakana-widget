@@ -25,7 +25,11 @@ Item {
     // keep every bar pill / desktop widget (all monitors) on the same kana
     readonly property bool syncInstances: settings.syncInstances ?? true
     readonly property bool autoPlay: settings.autoPlay ?? false
-    readonly property string ttsCommand: (settings.ttsCommand ?? "") !== "" ? settings.ttsCommand : "espeak-ng -v ja -s 110 {text}"
+    // Audio: pre-rendered clips in data/audio/<romaji>.wav (see gen-audio) played
+    // with playerCommand; empty = pick pw-play / paplay / mpv / ffplay at run time.
+    // A non-empty ttsCommand replaces the clips with live text-to-speech.
+    readonly property string playerCommand: settings.playerCommand ?? ""
+    readonly property string ttsCommand: settings.ttsCommand ?? ""
     readonly property string pluginId: "katakanaWidget"
     property double lastStamp: 0
 
@@ -153,14 +157,31 @@ Item {
     }
 
     // --- audio -------------------------------------------------------------
-    // The command is split on whitespace, no shell involved; "{text}" must be
-    // a whole argument and is replaced with the kana.
+    // Commands are split on whitespace, no shell involved; "{file}" / "{text}"
+    // must be a whole argument and is replaced with the clip path / the kana.
     function argv(cmd, key, value) {
         return cmd.split(/\s+/).filter(t => t.length > 0).map(t => t === key ? value : t);
     }
 
+    readonly property string clipFile: dataDir + "/audio/" + reading + ".wav"
+
+    // first player found on PATH; each one drains the buffer before exiting,
+    // so a 0.4 s clip is not cut short
+    readonly property string autoPlayer:
+        'f="$1"; ' +
+        'command -v pw-play >/dev/null && exec pw-play "$f"; ' +
+        'command -v paplay  >/dev/null && exec paplay "$f"; ' +
+        'command -v mpv     >/dev/null && exec mpv --no-video --really-quiet "$f"; ' +
+        'command -v ffplay  >/dev/null && exec ffplay -nodisp -autoexit -loglevel quiet -af apad=pad_dur=0.3 "$f"; ' +
+        'echo "katakanaWidget: no audio player (pw-play, paplay, mpv, ffplay)" >&2; exit 1'
+
     function play() {
         if (!hasAudio) return;
-        Quickshell.execDetached(argv(ttsCommand, "{text}", main));
+        if (ttsCommand !== "")
+            Quickshell.execDetached(argv(ttsCommand, "{text}", main));
+        else if (playerCommand !== "")
+            Quickshell.execDetached(argv(playerCommand, "{file}", clipFile));
+        else
+            Quickshell.execDetached(["sh", "-c", autoPlayer, "sh", clipFile]);
     }
 }

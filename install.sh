@@ -10,6 +10,9 @@ if [ "$1" = "copy" ]; then
     cp -rL "$DIR/KatakanaWidget" "$DEST/KatakanaWidget"
     echo "copied to $DEST/KatakanaWidget"
 else
+    # an earlier "copy" install leaves a real directory; ln -sfn would put the
+    # link inside it instead of replacing it
+    [ -d "$DEST/KatakanaWidget" ] && [ ! -L "$DEST/KatakanaWidget" ] && rm -rf "$DEST/KatakanaWidget"
     ln -sfn "$DIR/KatakanaWidget" "$DEST/KatakanaWidget"
     echo "linked $DEST/KatakanaWidget -> $DIR/KatakanaWidget"
 fi
